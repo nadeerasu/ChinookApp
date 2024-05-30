@@ -17,8 +17,8 @@ namespace Chinook.Controllers
             _artistService = artistService;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<ArtistDTO>>> GetArtists()
+        [HttpGet("artists")]
+        public async Task<ActionResult<IEnumerable<ArtistDTO>>> GetArtistsAsync()
         {
             try
             {
@@ -31,13 +31,13 @@ namespace Chinook.Controllers
             }
         }
 
-        [HttpGet("{id}/albums")]
-        public async Task<ActionResult<IEnumerable<AlbumDTO>>> GetAlbumsForArtist(int id)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ArtistDTO>> GetArtistsByIdAsync(int id)
         {
             try
             {
-                var albums = await _artistService.GetAlbumsForArtistAsync(id);
-                return Ok(albums.Select(a => a.ToDTO()));
+                var artists = await _artistService.GetArtistByIdAsync(id);
+                return Ok(artists?.ToDTO());
             }
             catch (Exception ex)
             {

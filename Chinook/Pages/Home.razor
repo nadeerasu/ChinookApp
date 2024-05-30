@@ -54,7 +54,7 @@ else
 
     public async Task LoadArtists()
     {
-        var response = await Http.GetAsync($"{new Uri(NavigationManager.BaseUri)}api/artist");
+        var response = await Http.GetAsync($"{new Uri(NavigationManager.BaseUri)}api/artist/artists");
         if (response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync();

@@ -1,4 +1,6 @@
-﻿namespace Chinook.ClientModels
+﻿
+
+namespace Chinook.ClientModels
 {
     public class AlbumDTO
     {

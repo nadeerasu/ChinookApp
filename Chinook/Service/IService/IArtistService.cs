@@ -5,6 +5,6 @@ namespace Chinook.Service.IService
     public interface IArtistService
     {
         Task<List<Artist>> GetArtistsAsync();
-        Task<List<Album>> GetAlbumsForArtistAsync(int artistId);
+        Task<Artist?> GetArtistByIdAsync(int artistId);
     }
 }

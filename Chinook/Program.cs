@@ -19,7 +19,12 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<IArtistService, ArtistService>();
+builder.Services.AddHttpClient<IPlaylistService, PlaylistService>();
+builder.Services.AddHttpClient<ITrackService, TrackService>();
+
 builder.Services.AddScoped<IArtistService, ArtistService>();
+builder.Services.AddScoped<IPlaylistService, PlaylistService>();
+builder.Services.AddScoped<ITrackService, TrackService>();
 builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<ChinookUser>>();
 
 var app = builder.Build();

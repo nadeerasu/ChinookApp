@@ -19,10 +19,10 @@ namespace Chinook.Service
             return await dbContext.Artists.Include(a => a.Albums).ToListAsync();
         }
 
-        public async Task<List<Album>> GetAlbumsForArtistAsync(int artistId)
+        public async Task<Artist?> GetArtistByIdAsync(int artistId)
         {
             using var dbContext = await _dbFactory.CreateDbContextAsync();
-            return await dbContext.Albums.Where(a => a.ArtistId == artistId).ToListAsync();
+            return await dbContext.Artists.FirstOrDefaultAsync(a => a.ArtistId == artistId);
         }
     }
 }
