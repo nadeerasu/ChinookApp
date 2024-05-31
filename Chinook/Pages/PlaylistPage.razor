@@ -41,7 +41,7 @@ else
                     <td>@track.ArtistName - @track.AlbumTitle - @track.TrackName</td>
                     <td>
                         <div class="d-flex">
-                            @if (Playlist.Name != "Favorite")
+                            @if (Playlist.Name != SD.AutomaticPlaylist)
                             {
                                 @if (track.IsFavorite)
                                 {
