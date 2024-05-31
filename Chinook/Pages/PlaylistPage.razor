@@ -1,11 +1,13 @@
 ﻿@page "/playlist/{PlaylistId:long}"
 @attribute [Authorize]
 
-@using Chinook.Models
-@using Microsoft.EntityFrameworkCore
+@using Chinook.ClientModels
+@using System.Text.Json
 @using System.Security.Claims;
-
-<h1>Playlist <strong>@Playlist.Name</strong></h1>
+@using Chinook.Utilities
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+<h1>Playlist <strong>@Playlist?.Name</strong></h1>
 
 @if (!string.IsNullOrWhiteSpace(InfoMessage))
 {
@@ -39,7 +41,7 @@ else
                     <td>@track.ArtistName - @track.AlbumTitle - @track.TrackName</td>
                     <td>
                         <div class="d-flex">
-                            @if (Playlist.Name != "Favorite")
+                            @if (Playlist.Name != SD.AutomaticPlaylist)
                             {
                                 @if (track.IsFavorite)
                                 {
@@ -62,72 +64,72 @@ else
 
 @code {
     [Parameter] public long PlaylistId { get; set; }
-    [Inject] IDbContextFactory<ChinookContext> DbFactory { get; set; }
-    [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; }
-
-    private Chinook.ClientModels.Playlist Playlist;
-    private string CurrentUserId;
-    private string InfoMessage;
+    private PlaylistDTO? Playlist;
+    private string InfoMessage = string.Empty;
+    private string? CurrentUserId;
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        CurrentUserId = await GetUserId();
-
         await InvokeAsync(StateHasChanged);
-        var DbContext = await DbFactory.CreateDbContextAsync();
-
-        Playlist = DbContext.Playlists
-            .Include(a => a.Tracks).ThenInclude(a => a.Album).ThenInclude(a => a.Artist)
-            .Where(p => p.PlaylistId == PlaylistId)
-            .Select(p => new ClientModels.Playlist()
-                {
-                    Name = p.Name,
-                    Tracks = p.Tracks.Select(t => new ClientModels.PlaylistTrack()
-                    {
-                        AlbumTitle = t.Album.Title,
-                        ArtistName = t.Album.Artist.Name,
-                        TrackId = t.TrackId,
-                        TrackName = t.Name,
-                        IsFavorite = t.Playlists.Where(p => p.UserPlaylists.Any(up => up.UserId == CurrentUserId && up.Playlist.Name == "Favorites")).Any()
-                    }).ToList()
-                })
-            .FirstOrDefault();
+        CurrentUserId = await GetUserId();
+        await LoadPlaylist();
     }
 
-    private async Task<string> GetUserId()
+    private async Task LoadPlaylist()
     {
-        var user = (await authenticationState).User;
+        var response = await Http.GetAsync($"{new Uri(NavigationManager.BaseUri)}api/playlist/{PlaylistId}?userId={CurrentUserId}");
+        if (response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            Playlist = JsonSerializer.Deserialize <PlaylistDTO>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+    }
+    private async Task<string?> GetUserId()
+    {
+        var user = (await AuthenticationState).User;
         var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
         return userId;
     }
 
-    private void FavoriteTrack(long trackId)
+    private async Task FavoriteTrack(long trackId)
     {
-        var track = Playlist.Tracks.FirstOrDefault(t => t.TrackId == trackId);
-
-        // TODO: add track to Favorites playlist
-
-        InfoMessage = $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} added to playlist Favorites.";
+        var response = await Http.PostAsync($"{new Uri(NavigationManager.BaseUri)}api/playlist/favorite/{trackId}?userId={CurrentUserId}", null);
+        if (response.IsSuccessStatusCode)
+        {
+            var track = Playlist?.Tracks.FirstOrDefault(t => t.TrackId == trackId);
+            InfoMessage = $"Track {track?.ArtistName} - {track?.AlbumTitle} - {track?.TrackName} added to playlist {SD.AutomaticPlaylist}.";
+            await LoadPlaylist();
+        }
     }
 
-    private void UnfavoriteTrack(long trackId)
+    private async Task UnfavoriteTrack(long trackId)
     {
-        var track = Playlist.Tracks.FirstOrDefault(t => t.TrackId == trackId);
-
-        // TODO: remove track from Favorites playlist
-
-        InfoMessage = $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} removed from playlist Favorites.";
+        var response = await Http.PostAsync($"{new Uri(NavigationManager.BaseUri)}api/playlist/unfavorite/{trackId}?userId={CurrentUserId}", null);
+        if (response.IsSuccessStatusCode)
+        {
+            var track = Playlist?.Tracks.FirstOrDefault(t => t.TrackId == trackId);
+            InfoMessage = $"Track {track?.ArtistName} - {track?.AlbumTitle} - {track?.TrackName} removed from playlist {SD.AutomaticPlaylist}.";
+            await LoadPlaylist();
+        }
     }
 
-    private void RemoveTrack(long trackId)
+    private async Task RemoveTrack(long trackId)
     {
-        // TODO
-        CloseInfoMessage();
+        var response = await Http.DeleteAsync($"{new Uri(NavigationManager.BaseUri)}api/playlist/{PlaylistId}/track/{trackId}");
+        if (response.IsSuccessStatusCode)
+        {
+            CloseInfoMessage();
+            await LoadPlaylist();
+        }
     }
 
     private void CloseInfoMessage()
     {
-        InfoMessage = "";
+        InfoMessage = string.Empty;
     }
-
 }
