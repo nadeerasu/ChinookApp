@@ -54,22 +54,7 @@ namespace Chinook.Service
                 .FirstOrDefaultAsync(p => p.UserPlaylists.Any(up => up.UserId == userId && up.Playlist.Name == playlistName));
             if (playlist == null)
             {
-                var maxPlaylistId = await dbContext.Playlists.MaxAsync(p => (long?)p.PlaylistId) ?? 0;
-                var newPlaylistId = maxPlaylistId + 1;
-                // Create a new favorite playlist for the user if it doesn't exist
-                playlist = new Playlist
-                {
-                    Name = playlistName,
-                    UserPlaylists = new List<UserPlaylist>
-                    {
-                        new UserPlaylist { UserId = userId },
-
-                    },
-                    PlaylistId = newPlaylistId
-
-                };
-                dbContext.Playlists.Add(playlist);
-                await dbContext.SaveChangesAsync();
+                playlist = await AddPlaylistAsync(userId, playlistName);
             }
             else
             {
@@ -82,6 +67,30 @@ namespace Chinook.Service
             }
 
             await addUserPlaylistToPlaylist( playlist.PlaylistId, userId, trackId);
+        }
+
+
+        public async Task<Playlist> AddPlaylistAsync(string userId, string playlistName)
+        {
+            using var dbContext = await _dbFactory.CreateDbContextAsync();
+            var maxPlaylistId = await dbContext.Playlists.MaxAsync(p => (long?)p.PlaylistId) ?? 0;
+            var newPlaylistId = maxPlaylistId + 1;
+            // Create a new favorite playlist for the user if it doesn't exist
+            var playlist = new Playlist
+            {
+                Name = playlistName,
+                UserPlaylists = new List<UserPlaylist>
+                    {
+                        new UserPlaylist { UserId = userId },
+
+                    },
+                PlaylistId = newPlaylistId
+
+            };
+            dbContext.Playlists.Add(playlist);
+            await dbContext.SaveChangesAsync();
+
+            return playlist;
         }
 
         public async Task addUserPlaylistToPlaylist(long playlistId, string userId, long trackId)

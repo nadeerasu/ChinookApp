@@ -66,6 +66,26 @@ namespace Chinook.Controllers
             }
         }
 
+        [HttpPost()]
+        public async Task<IActionResult> AddPlaylistAsync([FromQuery] string playlistName, [FromQuery] string? userId, [FromQuery] long trackId)
+        {
+
+            try
+            {
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { message = SD.UserNotAuthorized });
+                }
+
+                await _playlistService.AddTrackAsync(trackId, userId, playlistName);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new { message = ex.Message });
+            }
+        }
+
         [HttpPost("unfavorite/{trackId:long}")]
         public async Task<IActionResult> UnfavoriteTrackAsync(long trackId, [FromQuery] string? userId)
         {

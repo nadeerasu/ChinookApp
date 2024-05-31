@@ -108,7 +108,6 @@ else
         await InvokeAsync(StateHasChanged);
         CurrentUserId = await GetUserId();
         await LoadArtist();
-        await LoadUserPlaylists();
         await LoadPlaylistTracks();
     }
 
@@ -196,28 +195,49 @@ else
         }
     }
 
-    private void OpenPlaylistDialog(long trackId)
+    private async Task OpenPlaylistDialog(long trackId)
     {
+        await LoadUserPlaylists();
         CloseInfoMessage();
         SelectedTrack = Tracks?.FirstOrDefault(t => t.TrackId == trackId);
         PlaylistDialog.Open();
     }
 
-    private void AddTrackToPlaylist()
+    private async Task AddTrackToPlaylist()
     {
         // TODO
         if (string.IsNullOrWhiteSpace(NewPlaylistName))
         {
-           
         }
         else
         {
-          InfoMessage = "Failed to create new playlist.";
+            var IsNameAvailable = !UserPlaylists.Any(t => t.Name.Contains(NewPlaylistName.Trim()));
+            if (IsNameAvailable)
+            {
+                await AddPlaylist();
+            }
+            else
+            {
+                CloseInfoMessage();
+                InfoMessage = "Name not Available - Failed to create new playlist.";
+            }
+        }
+
+        PlaylistDialog.Close();
+    }
+
+    private async Task AddPlaylist()
+    {
+        var response = await Http.PostAsync($"{new Uri(NavigationManager.BaseUri)}api/playlist?playlistName={NewPlaylistName}&userId={CurrentUserId}&trackId={SelectedTrack?.TrackId}", null);
+        if (response.IsSuccessStatusCode)
+        {
+            CloseInfoMessage();
+            await LoadPlaylistTracks();
+            InfoMessage = $"Track {Artist?.Name} - {SelectedTrack?.AlbumTitle} - {SelectedTrack?.TrackName} added to playlist {{playlist name}}.";
+
         }
 
         CloseInfoMessage();
-        InfoMessage = $"Track {Artist?.Name} - {SelectedTrack?.AlbumTitle} - {SelectedTrack?.TrackName} added to playlist {{playlist name}}.";
-        PlaylistDialog.Close();
     }
 
     private void CloseInfoMessage()
