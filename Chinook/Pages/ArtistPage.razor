@@ -65,21 +65,22 @@ else
         @if (SelectedTrack != null)
         {
             <div class="form-group mb-2">
-                <label>@Artist.Name - @SelectedTrack.AlbumTitle - @SelectedTrack.TrackName</label>
+                <label>@Artist?.Name - @SelectedTrack.AlbumTitle - @SelectedTrack.TrackName</label>
             </div>
         }
 
         <div class="mb-2">
             <label for="ExistingPlaylist">Add to existing playlist</label>
-            <select class="form-control" id="ExistingPlaylist">
-                <option>Playlist 1</option>
-                <option>Playlist 2</option>
-                <option>Playlist 3</option>
+            <select id="ExistingPlaylist" class="form-control" @bind="SelectedPlaylistId">
+                @foreach (var playlist in UserPlaylists)
+                {
+                    <option value="@playlist.PlaylistId">@playlist.Name</option>
+                }
             </select>
         </div>
         <div class="mb-2">
             <label for="NewPlaylist">Create new playlist</label>
-            <input type="text" id="NewPlaylist" class="form-control" placeholder="Name for the new playlist">
+            <input type="text" id="NewPlaylist" class="form-control" placeholder="Name for the new playlist" @bind="NewPlaylistName">
         </div>
     </Body>
     <Footer>
@@ -96,6 +97,9 @@ else
     private PlaylistDTO? Playlist;
     private string? InfoMessage;
     private string? CurrentUserId;
+    private IEnumerable<PlaylistDTO> UserPlaylists = Enumerable.Empty<PlaylistDTO>();
+    private long SelectedPlaylistId { get; set; }
+    private string? NewPlaylistName { get; set; }
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = null!;
 
@@ -104,8 +108,8 @@ else
         await InvokeAsync(StateHasChanged);
         CurrentUserId = await GetUserId();
         await LoadArtist();
-        await LoadPlaylistTrack();
-
+        await LoadUserPlaylists();
+        await LoadPlaylistTracks();
     }
 
 
@@ -124,7 +128,7 @@ else
         if (response.IsSuccessStatusCode)
         {
             InfoMessage = $"Track {selectedTrack?.ArtistName} - {selectedTrack?.AlbumTitle} - {selectedTrack?.TrackName} added to playlist  {SD.AutomaticPlaylist}.";
-            await LoadPlaylistTrack();
+            await LoadPlaylistTracks();
         }
     }
 
@@ -136,7 +140,7 @@ else
         {
             var track = Playlist?.Tracks.FirstOrDefault(t => t.TrackId == trackId);
             InfoMessage = $"Track {selectedTrack?.ArtistName} - {selectedTrack?.AlbumTitle} - {selectedTrack?.TrackName} removed from playlist  {SD.AutomaticPlaylist}.";
-            await LoadPlaylistTrack();
+            await LoadPlaylistTracks();
         }
     }
 
@@ -157,7 +161,7 @@ else
         }
     }
 
-    public async Task LoadPlaylistTrack()
+    public async Task LoadPlaylistTracks()
     {
         var response = await Http.GetAsync($"{new Uri(NavigationManager.BaseUri)}api/track/{ArtistId}?userId={CurrentUserId}");
         if (response.IsSuccessStatusCode)
@@ -175,6 +179,23 @@ else
     }
 
 
+    public async Task LoadUserPlaylists()
+    {
+        var response = await Http.GetAsync($"{new Uri(NavigationManager.BaseUri)}api/playlist/playlists?userId={CurrentUserId}");
+        if (response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            UserPlaylists = JsonSerializer.Deserialize<IEnumerable<PlaylistDTO>>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? Enumerable.Empty<PlaylistDTO>();
+        }
+        else
+        {
+            UserPlaylists = Enumerable.Empty<PlaylistDTO>();
+        }
+    }
+
     private void OpenPlaylistDialog(long trackId)
     {
         CloseInfoMessage();
@@ -185,6 +206,15 @@ else
     private void AddTrackToPlaylist()
     {
         // TODO
+        if (string.IsNullOrWhiteSpace(NewPlaylistName))
+        {
+           
+        }
+        else
+        {
+          InfoMessage = "Failed to create new playlist.";
+        }
+
         CloseInfoMessage();
         InfoMessage = $"Track {Artist?.Name} - {SelectedTrack?.AlbumTitle} - {SelectedTrack?.TrackName} added to playlist {{playlist name}}.";
         PlaylistDialog.Close();

@@ -1,6 +1,7 @@
 ﻿
 using Chinook.ClientModels;
 using Chinook.Mapping;
+using Chinook.Service;
 using Chinook.Service.IService;
 using Chinook.Utilities;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -22,7 +23,7 @@ namespace Chinook.Controllers
         }
 
         [HttpGet("{playlistId:long}")]
-        public async Task<ActionResult<PlaylistDTO>> GetPlaylist(long playlistId, [FromQuery] string? userId)
+        public async Task<ActionResult<PlaylistDTO>> GetPlaylistAsync(long playlistId, [FromQuery] string? userId)
         {
             try
             {
@@ -47,7 +48,7 @@ namespace Chinook.Controllers
         }
 
         [HttpPost("favorite/{trackId:long}")]
-        public async Task<IActionResult> FavoriteTrack(long trackId, [FromQuery] string? userId)
+        public async Task<IActionResult> FavoriteTrackAsync(long trackId, [FromQuery] string? userId)
         {
             try
             {
@@ -56,7 +57,7 @@ namespace Chinook.Controllers
                     return Unauthorized(new { message = SD.UserNotAuthorized });
                 }
 
-                await _playlistService.FavoriteTrackAsync(trackId, userId);
+                await _playlistService.AddTrackAsync(trackId, userId, SD.AutomaticPlaylist);
                 return Ok();
             }
             catch (Exception ex)
@@ -66,7 +67,7 @@ namespace Chinook.Controllers
         }
 
         [HttpPost("unfavorite/{trackId:long}")]
-        public async Task<IActionResult> UnfavoriteTrack(long trackId, [FromQuery] string? userId)
+        public async Task<IActionResult> UnfavoriteTrackAsync(long trackId, [FromQuery] string? userId)
         {
             try
             {
@@ -75,7 +76,7 @@ namespace Chinook.Controllers
                     return Unauthorized(new { message = SD.UserNotAuthorized });
                 }
 
-                await _playlistService.UnfavoriteTrackAsync(trackId, userId);
+                await _playlistService.RemoveTrackAsync(trackId, userId, SD.AutomaticPlaylist);
                 return Ok();
             }
             catch (Exception ex)
@@ -84,8 +85,27 @@ namespace Chinook.Controllers
             }
         }
 
+        [HttpGet("playlists")]
+        public async Task<ActionResult<IEnumerable<PlaylistDTO>>> GetPlaylistsAsync([FromQuery] string? userId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { message = SD.UserNotAuthorized });
+                }
+
+                var playlists = await _playlistService.GetPlaylistsAsync(userId);
+                return Ok(playlists.Select(a => a.ToDTO()));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new { message = ex.Message });
+            }
+        }
+
         [HttpDelete("{playlistId:long}/track/{trackId:long}")]
-        public async Task<IActionResult> RemoveTrack(long playlistId, long trackId)
+        public async Task<IActionResult> RemoveTrackAsync(long playlistId, long trackId)
         {
             try
             {

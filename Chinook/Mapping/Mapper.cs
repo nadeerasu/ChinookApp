@@ -27,6 +27,15 @@ namespace Chinook.Mapping
             };
         }
 
+        public static PlaylistDTO ToDTO(this Playlist playlist)
+        {
+            return new PlaylistDTO
+            {
+                Name = playlist.Name,
+                PlaylistId = playlist.PlaylistId,
+            };
+        }
+
         public static PlaylistTrackDTO ToDTO(this Track track, string CurrentUserId)
         {
             return new PlaylistTrackDTO
